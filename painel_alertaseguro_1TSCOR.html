@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AlertaSeguro — Painel de Data Visualization (FIAP GS 2026.2)</title>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <style>
+    :root {
+      --primary: #0f3d68;
+      --secondary: #1e6091;
+      --accent: #f77f00;
+      --danger: #d62828;
+      --success: #2a9d8f;
+      --bg: #f4f7fa;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 40px; }
+    header {
+      background: linear-gradient(135deg, var(--primary) 0%, #164e87 70%, #d96b00 100%);
+      color: #fff;
+      padding: 24px 32px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .header-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .brand h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: 0.5px; }
+    .brand h1 span { color: #ffb703; }
+    .brand p { font-size: 0.92rem; opacity: 0.9; margin-top: 4px; }
+    .meta-badge {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      text-align: right;
+    }
+    .container { max-width: 1360px; margin: 24px auto; padding: 0 24px; }
+    
+    /* Filtros Interativos */
+    .filters-bar {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-end;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+      margin-bottom: 24px;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 6px; min-width: 210px; flex: 1; }
+    .filter-group label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: var(--muted); }
+    select {
+      padding: 9px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      color: var(--text);
+      background: #fff;
+      cursor: pointer;
+    }
+    button.reset-btn {
+      padding: 9px 18px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      height: 39px;
+      transition: background 0.2s;
+    }
+    button.reset-btn:hover { background: var(--secondary); }
+
+    /* KPIs */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+      border-top: 4px solid var(--primary);
+    }
+    .kpi-card.orange { border-top-color: var(--accent); }
+    .kpi-card.red { border-top-color: var(--danger); }
+    .kpi-card.green { border-top-color: var(--success); }
+    .kpi-title { font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+    .kpi-value { font-size: 1.85rem; font-weight: 800; margin: 8px 0 4px; color: var(--text); }
+    .kpi-sub { font-size: 0.82rem; color: var(--muted); }
+
+    /* Charts Grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+    .chart-card.full { grid-column: 1 / -1; }
+    .chart-header { margin-bottom: 10px; }
+    .chart-header h3 { font-size: 1.05rem; color: var(--primary); }
+    .chart-just {
+      font-size: 0.83rem;
+      color: var(--muted);
+      background: #f8fafc;
+      border-left: 3px solid var(--accent);
+      padding: 6px 10px;
+      margin-top: 8px;
+      border-radius: 0 6px 6px 0;
+    }
+
+    /* Storytelling / Insights */
+    .insights-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+    .insights-section h2 { font-size: 1.15rem; color: var(--primary); margin-bottom: 14px; }
+    .insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+    .insight-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .insight-box strong { color: var(--primary); display: block; margin-bottom: 6px; font-size: 0.95rem; }
+    .insight-box p { font-size: 0.88rem; line-height: 1.45; color: #334155; }
+
+    footer {
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 24px;
+    }
+    @media (max-width: 900px) {
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="brand">
+      <h1>ALERTA<span>SEGURO</span> — Painel de Data Visualization</h1>
+      <p>Monitoramento Preditivo de Riscos Climáticos, Drenagem Urbana e Vulnerabilidade Territorial (RMSP)</p>
+    </div>
+    <div class="meta-badge">
+      <strong>FIAP Global Solution 2026.2 — CitizenTech</strong><br/>
+      Turma: 1TSCOR | Fontes: CEMADEN, IBGE (2022) &amp; Portal 156
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <!-- Barra de Filtros Interativos -->
+  <div class="filters-bar">
+    <div class="filter-group">
+      <label for="filtroTerritorio">Território / Bairro Monitorado</label>
+      <select id="filtroTerritorio">
+        <option value="TODOS">Todos os Territórios (RMSP)</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="filtroPerfil">Perfil Socioambiental</label>
+      <select id="filtroPerfil">
+        <option value="TODOS">Todos os Perfis</option>
+        <option value="Periferia / Encosta-Várzea">Periferia / Encosta-Várzea</option>
+        <option value="Área Central">Área Central (Referência)</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="filtroAlerta">Nível de Alerta AlertaSeguro</label>
+      <select id="filtroAlerta">
+        <option value="TODOS">Todos os Níveis de Alerta</option>
+        <option value="Verde (Normal)">Verde (Normal)</option>
+        <option value="Amarelo (Atenção)">Amarelo (Atenção)</option>
+        <option value="Laranja (Alerta)">Laranja (Alerta)</option>
+        <option value="Vermelho (Alerta Máximo)">Vermelho (Alerta Máximo)</option>
+      </select>
+    </div>
+    <button class="reset-btn" onclick="resetarFiltros()">Limpar Filtros</button>
+  </div>
+
+  <!-- Cards de KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-title">Total de Chamados Drenagem</div>
+      <div class="kpi-value" id="kpiChamados">-</div>
+      <div class="kpi-sub">Ocorrências registradas no período</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-title">Tempo Médio de Atendimento</div>
+      <div class="kpi-value" id="kpiTempo">-</div>
+      <div class="kpi-sub">Dias médios para resposta da zeladoria</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-title">Taxa de Resolução (≤ 7 dias)</div>
+      <div class="kpi-value" id="kpiResolucao">-</div>
+      <div class="kpi-sub">Eficiência operacional por território</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-title">Score Médio de Risco</div>
+      <div class="kpi-value" id="kpiScore">-</div>
+      <div class="kpi-sub">Índice preditivo AlertaSeguro (0–100)</div>
+    </div>
+  </div>
+
+  <!-- Gráficos -->
+  <div class="charts-grid">
+    <div class="chart-card full">
+      <div class="chart-header">
+        <h3>1. Evolução Temporal: Chamados de Drenagem vs. Tempo Médio de Atendimento</h3>
+        <div class="chart-just">
+          <strong>Justificativa Visual:</strong> Gráfico combinado (Barras + Linha) ideal para correlacionar o volume mensal de chamados de alagamento/drenagem com a degradação do tempo de resposta durante o verão chuvoso.
+        </div>
+      </div>
+      <div id="chartSazonalidade" style="height: 360px;"></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3>2. Ranking Territorial: Taxa de Resolução em até 7 Dias (%)</h3>
+        <div class="chart-just">
+          <strong>Justificativa Visual:</strong> Gráfico de barras horizontais ordenado para evidenciar comparações diretas e desigualdades de atendimento entre bairros periféricos e áreas centrais.
+        </div>
+      </div>
+      <div id="chartRanking" style="height: 350px;"></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3>3. Modelo Preditivo: Chuva Acumulada (72h) vs. Score de Risco</h3>
+        <div class="chart-just">
+          <strong>Justificativa Visual:</strong> Gráfico de dispersão colorido por nível de severidade para demonstrar a correlação entre precipitação acumulada e os gatilhos de disparo de SMS (Score ≥ 60 e ≥ 80).
+        </div>
+      </div>
+      <div id="chartDispersao" style="height: 350px;"></div>
+    </div>
+  </div>
+
+  <!-- Storytelling e Insights -->
+  <div class="insights-section">
+    <h2>Storytelling &amp; Principais Insights Conectados à Solução AlertaSeguro</h2>
+    <div class="insights-grid">
+      <div class="insight-box">
+        <strong>1. Sazonalidade Crítica (Novembro a Abril)</strong>
+        <p>Os chamados de drenagem saltam mais de 80% nos meses de verão, fazendo o tempo médio de atendimento subir de ~6 dias para mais de 13 dias — justificando alertas preventivos antes da saturação das equipes.</p>
+      </div>
+      <div class="insight-box">
+        <strong>2. Desigualdade Territorial na Resposta</strong>
+        <p>Bairros periféricos de encosta e várzea (como Jardim Zaíra, Vila Verde e Jardim Ângela) têm taxa de resolução em até 7 dias abaixo de 50%, reforçando a urgência de rotas de fuga e alertas via SMS offline-first.</p>
+      </div>
+      <div class="insight-box">
+        <strong>3. Prevenção Guiada por Dados (Score ≥ 60)</strong>
+        <p>Cruzar chuva acumulada em 72h com saturação do solo e bueiros obstruídos permite acionar o gatilho Laranja (Score 60) e Vermelho (Score 80) com horas de antecedência para evacuação segura.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <strong>Integrantes (Turma 1TSCOR):</strong> Barbara de Araujo Moraes (RM575050) • Lucas de Oliveira Silva Pereira (RM576470) • Mateus Tonhato Takemoto (RM574989) • Yasmin Eduarda Guilhermina da Silva (RM575077)<br/>
+    Tratamento de dados realizado em Python (Pandas &amp; NumPy): remoção de duplicatas, imputação por mediana mensal e normalização do Score de Risco.
+  </footer>
+</div>
+
+<script>
+  const rawData = [{"mes_num":1,"mes":"Jan","territorio":"Jardim Zaíra (Mauá)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15770,"renda_media_sm":1.66,"chuva_72h_mm":181.9,"saturacao_solo_pct":100.0,"chamados_drenagem":466,"bueiros_obstruidos":195,"tempo_medio_atendimento_dias":17.8,"taxa_resolucao_7d_pct":28.0,"score_risco":95.9,"nivel_alerta":"Vermelho (Alerta Máximo)"},{"mes_num":2,"mes":"Fev","territorio":"Jardim Zaíra (Mauá)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15770,"renda_media_sm":1.66,"chuva_72h_mm":149.2,"saturacao_solo_pct":94.9,"chamados_drenagem":386,"bueiros_obstruidos":162,"tempo_medio_atendimento_dias":15.6,"taxa_resolucao_7d_pct":35.7,"score_risco":83.7,"nivel_alerta":"Vermelho (Alerta Máximo)"},{"mes_num":3,"mes":"Mar","territorio":"Jardim Zaíra (Mauá)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15770,"renda_media_sm":1.66,"chuva_72h_mm":140.6,"saturacao_solo_pct":90.1,"chamados_drenagem":370,"bueiros_obstruidos":155,"tempo_medio_atendimento_dias":15.1,"taxa_resolucao_7d_pct":37.6,"score_risco":79.3,"nivel_alerta":"Laranja (Alerta)"},{"mes_num":4,"mes":"Abr","territorio":"Jardim Zaíra (Mauá)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15770,"renda_media_sm":1.66,"chuva_72h_mm":109.4,"saturacao_solo_pct":59.7,"chamados_drenagem":218,"bueiros_obstruidos":91,"tempo_medio_atendimento_dias":11.5,"taxa_resolucao_7d_pct":51.3,"score_risco":55.7,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":5,"mes":"Mai","territorio":"Jardim Zaíra (Mauá)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15770,"renda_media_sm":1.66,"chuva_72h_mm":47.6,"saturacao_solo_pct":38.4,"chamados_drenagem":144,"bueiros_obstruidos":60,"tempo_medio_atendimento_dias":8.9,"taxa_resolucao_7d_pct":61.2,"score_risco":30.2,"nivel_alerta":"Verde (Normal)"},{"mes_num":6,"mes":"Jun","territorio":"Jardim Zaíra (Mauá)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15770,"renda_media_sm":1.66,"chuva_72h_mm":48.9,"saturacao_solo_pct":39.2,"chamados_drenagem":159,"bueiros_obstruidos":66,"tempo_medio_atendimento_dias":9.0,"taxa_resolucao_7d_pct":60.8,"score_risco":31.3,"nivel_alerta":"Verde (Normal)"},{"mes_num":7,"mes":"Jul","territorio":"Jardim Zaíra (Mauá)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15770,"renda_media_sm":1.66,"chuva_72h_mm":33.3,"saturacao_solo_pct":30.5,"chamados_drenagem":113,"bueiros_obstruidos":47,"tempo_medio_atendimento_dias":8.0,"taxa_resolucao_7d_pct":64.6,"score_risco":22.8,"nivel_alerta":"Verde (Normal)"},{"mes_num":8,"mes":"Ago","territorio":"Jardim Zaíra (Mauá)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15770,"renda_media_sm":1.66,"chuva_72h_mm":5.0,"saturacao_solo_pct":14.8,"chamados_drenagem":48,"bueiros_obstruidos":20,"tempo_medio_atendimento_dias":6.1,"taxa_resolucao_7d_pct":71.8,"score_risco":8.1,"nivel_alerta":"Verde (Normal)"},{"mes_num":9,"mes":"Set","territorio":"Jardim Zaíra (Mauá)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15770,"renda_media_sm":1.66,"chuva_72h_mm":46.2,"saturacao_solo_pct":37.7,"chamados_drenagem":147,"bueiros_obstruidos":61,"tempo_medio_atendimento_dias":8.8,"taxa_resolucao_7d_pct":61.6,"score_risco":29.7,"nivel_alerta":"Verde (Normal)"},{"mes_num":10,"mes":"Out","territorio":"Jardim Zaíra (Mauá)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15770,"renda_media_sm":1.66,"chuva_72h_mm":101.3,"saturacao_solo_pct":68.3,"chamados_drenagem":268,"bueiros_obstruidos":112,"tempo_medio_atendimento_dias":12.5,"taxa_resolucao_7d_pct":47.5,"score_risco":58.4,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":11,"mes":"Nov","territorio":"Jardim Zaíra (Mauá)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15770,"renda_media_sm":1.66,"chuva_72h_mm":128.0,"saturacao_solo_pct":83.1,"chamados_drenagem":319,"bueiros_obstruidos":133,"tempo_medio_atendimento_dias":14.2,"taxa_resolucao_7d_pct":41.0,"score_risco":71.9,"nivel_alerta":"Laranja (Alerta)"},{"mes_num":12,"mes":"Dez","territorio":"Jardim Zaíra (Mauá)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15770,"renda_media_sm":1.66,"chuva_72h_mm":177.2,"saturacao_solo_pct":100.0,"chamados_drenagem":441,"bueiros_obstruidos":185,"tempo_medio_atendimento_dias":17.5,"taxa_resolucao_7d_pct":28.5,"score_risco":94.4,"nivel_alerta":"Vermelho (Alerta Máximo)"},{"mes_num":1,"mes":"Jan","territorio":"Vila Verde (Franco da Rocha)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":14664,"renda_media_sm":1.42,"chuva_72h_mm":130.5,"saturacao_solo_pct":84.5,"chamados_drenagem":348,"bueiros_obstruidos":146,"tempo_medio_atendimento_dias":14.4,"taxa_resolucao_7d_pct":40.3,"score_risco":74.1,"nivel_alerta":"Laranja (Alerta)"},{"mes_num":2,"mes":"Fev","territorio":"Vila Verde (Franco da Rocha)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":14664,"renda_media_sm":1.42,"chuva_72h_mm":183.9,"saturacao_solo_pct":100.0,"chamados_drenagem":452,"bueiros_obstruidos":189,"tempo_medio_atendimento_dias":17.9,"taxa_resolucao_7d_pct":28.0,"score_risco":95.4,"nivel_alerta":"Vermelho (Alerta Máximo)"},{"mes_num":3,"mes":"Mar","territorio":"Vila Verde (Franco da Rocha)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":14664,"renda_media_sm":1.42,"chuva_72h_mm":130.5,"saturacao_solo_pct":84.5,"chamados_drenagem":329,"bueiros_obstruidos":138,"tempo_medio_atendimento_dias":14.4,"taxa_resolucao_7d_pct":40.3,"score_risco":73.5,"nivel_alerta":"Laranja (Alerta)"},{"mes_num":4,"mes":"Abr","territorio":"Vila Verde (Franco da Rocha)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":14664,"renda_media_sm":1.42,"chuva_72h_mm":141.5,"saturacao_solo_pct":90.6,"chamados_drenagem":356,"bueiros_obstruidos":149,"tempo_medio_atendimento_dias":15.1,"taxa_resolucao_7d_pct":37.6,"score_risco":79.2,"nivel_alerta":"Laranja (Alerta)"},{"mes_num":5,"mes":"Mai","territorio":"Vila Verde (Franco da Rocha)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":14664,"renda_media_sm":1.42,"chuva_72h_mm":73.5,"saturacao_solo_pct":52.8,"chamados_drenagem":187,"bueiros_obstruidos":78,"tempo_medio_atendimento_dias":10.6,"taxa_resolucao_7d_pct":54.7,"score_risco":43.2,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":6,"mes":"Jun","territorio":"Vila Verde (Franco da Rocha)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":14664,"renda_media_sm":1.42,"chuva_72h_mm":13.6,"saturacao_solo_pct":19.6,"chamados_drenagem":47,"bueiros_obstruidos":19,"tempo_medio_atendimento_dias":6.7,"taxa_resolucao_7d_pct":69.5,"score_risco":11.8,"nivel_alerta":"Verde (Normal)"},{"mes_num":7,"mes":"Jul","territorio":"Vila Verde (Franco da Rocha)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":14664,"renda_media_sm":1.42,"chuva_72h_mm":35.0,"saturacao_solo_pct":31.4,"chamados_drenagem":122,"bueiros_obstruidos":51,"tempo_medio_atendimento_dias":8.1,"taxa_resolucao_7d_pct":64.2,"score_risco":23.9,"nivel_alerta":"Verde (Normal)"},{"mes_num":8,"mes":"Ago","territorio":"Vila Verde (Franco da Rocha)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":14664,"renda_media_sm":1.42,"chuva_72h_mm":10.1,"saturacao_solo_pct":17.6,"chamados_drenagem":51,"bueiros_obstruidos":21,"tempo_medio_atendimento_dias":6.5,"taxa_resolucao_7d_pct":70.3,"score_risco":10.4,"nivel_alerta":"Verde (Normal)"},{"mes_num":9,"mes":"Set","territorio":"Vila Verde (Franco da Rocha)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":14664,"renda_media_sm":1.42,"chuva_72h_mm":70.9,"saturacao_solo_pct":51.4,"chamados_drenagem":194,"bueiros_obstruidos":81,"tempo_medio_atendimento_dias":10.5,"taxa_resolucao_7d_pct":55.1,"score_risco":42.3,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":10,"mes":"Out","territorio":"Vila Verde (Franco da Rocha)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":14664,"renda_media_sm":1.42,"chuva_72h_mm":112.6,"saturacao_solo_pct":74.6,"chamados_drenagem":287,"bueiros_obstruidos":120,"tempo_medio_atendimento_dias":13.2,"taxa_resolucao_7d_pct":44.8,"score_risco":64.1,"nivel_alerta":"Laranja (Alerta)"},{"mes_num":11,"mes":"Nov","territorio":"Vila Verde (Franco da Rocha)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":14664,"renda_media_sm":1.42,"chuva_72h_mm":148.7,"saturacao_solo_pct":94.6,"chamados_drenagem":386,"bueiros_obstruidos":162,"tempo_medio_atendimento_dias":15.6,"taxa_resolucao_7d_pct":35.7,"score_risco":83.5,"nivel_alerta":"Vermelho (Alerta Máximo)"},{"mes_num":12,"mes":"Dez","territorio":"Vila Verde (Franco da Rocha)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":14664,"renda_media_sm":1.42,"chuva_72h_mm":233.6,"saturacao_solo_pct":100.0,"chamados_drenagem":585,"bueiros_obstruidos":245,"tempo_medio_atendimento_dias":21.2,"taxa_resolucao_7d_pct":28.0,"score_risco":100.0,"nivel_alerta":"Vermelho (Alerta Máximo)"},{"mes_num":1,"mes":"Jan","territorio":"Jardim Ângela (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":8837,"renda_media_sm":1.48,"chuva_72h_mm":180.2,"saturacao_solo_pct":100.0,"chamados_drenagem":470,"bueiros_obstruidos":197,"tempo_medio_atendimento_dias":17.7,"taxa_resolucao_7d_pct":28.0,"score_risco":96.1,"nivel_alerta":"Vermelho (Alerta Máximo)"},{"mes_num":2,"mes":"Fev","territorio":"Jardim Ângela (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":8837,"renda_media_sm":1.48,"chuva_72h_mm":163.2,"saturacao_solo_pct":100.0,"chamados_drenagem":415,"bueiros_obstruidos":174,"tempo_medio_atendimento_dias":16.6,"taxa_resolucao_7d_pct":31.9,"score_risco":90.0,"nivel_alerta":"Vermelho (Alerta Máximo)"},{"mes_num":3,"mes":"Mar","territorio":"Jardim Ângela (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":8837,"renda_media_sm":1.48,"chuva_72h_mm":105.0,"saturacao_solo_pct":70.3,"chamados_drenagem":269,"bueiros_obstruidos":112,"tempo_medio_atendimento_dias":12.7,"taxa_resolucao_7d_pct":46.7,"score_risco":60.0,"nivel_alerta":"Laranja (Alerta)"},{"mes_num":4,"mes":"Abr","territorio":"Jardim Ângela (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":8837,"renda_media_sm":1.48,"chuva_72h_mm":77.2,"saturacao_solo_pct":54.9,"chamados_drenagem":218,"bueiros_obstruidos":91,"tempo_medio_atendimento_dias":10.9,"taxa_resolucao_7d_pct":53.6,"score_risco":45.9,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":5,"mes":"Mai","territorio":"Jardim Ângela (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":8837,"renda_media_sm":1.48,"chuva_72h_mm":75.6,"saturacao_solo_pct":54.0,"chamados_drenagem":195,"bueiros_obstruidos":81,"tempo_medio_atendimento_dias":10.8,"taxa_resolucao_7d_pct":54.0,"score_risco":44.4,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":6,"mes":"Jun","territorio":"Jardim Ângela (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":8837,"renda_media_sm":1.48,"chuva_72h_mm":51.6,"saturacao_solo_pct":40.7,"chamados_drenagem":160,"bueiros_obstruidos":67,"tempo_medio_atendimento_dias":9.2,"taxa_resolucao_7d_pct":60.0,"score_risco":32.6,"nivel_alerta":"Verde (Normal)"},{"mes_num":7,"mes":"Jul","territorio":"Jardim Ângela (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":8837,"renda_media_sm":1.48,"chuva_72h_mm":35.1,"saturacao_solo_pct":31.5,"chamados_drenagem":127,"bueiros_obstruidos":53,"tempo_medio_atendimento_dias":8.1,"taxa_resolucao_7d_pct":64.2,"score_risco":24.1,"nivel_alerta":"Verde (Normal)"},{"mes_num":8,"mes":"Ago","territorio":"Jardim Ângela (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":8837,"renda_media_sm":1.48,"chuva_72h_mm":57.5,"saturacao_solo_pct":43.9,"chamados_drenagem":180,"bueiros_obstruidos":75,"tempo_medio_atendimento_dias":9.6,"taxa_resolucao_7d_pct":58.5,"score_risco":35.9,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":9,"mes":"Set","territorio":"Jardim Ângela (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":8837,"renda_media_sm":1.48,"chuva_72h_mm":62.9,"saturacao_solo_pct":46.9,"chamados_drenagem":183,"bueiros_obstruidos":76,"tempo_medio_atendimento_dias":9.9,"taxa_resolucao_7d_pct":57.4,"score_risco":38.3,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":10,"mes":"Out","territorio":"Jardim Ângela (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":8837,"renda_media_sm":1.48,"chuva_72h_mm":86.8,"saturacao_solo_pct":60.2,"chamados_drenagem":252,"bueiros_obstruidos":105,"tempo_medio_atendimento_dias":11.5,"taxa_resolucao_7d_pct":51.3,"score_risco":51.3,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":11,"mes":"Nov","territorio":"Jardim Ângela (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":8837,"renda_media_sm":1.48,"chuva_72h_mm":101.5,"saturacao_solo_pct":68.4,"chamados_drenagem":287,"bueiros_obstruidos":120,"tempo_medio_atendimento_dias":12.5,"taxa_resolucao_7d_pct":47.5,"score_risco":59.1,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":12,"mes":"Dez","territorio":"Jardim Ângela (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":8837,"renda_media_sm":1.48,"chuva_72h_mm":193.3,"saturacao_solo_pct":100.0,"chamados_drenagem":473,"bueiros_obstruidos":198,"tempo_medio_atendimento_dias":18.5,"taxa_resolucao_7d_pct":28.0,"score_risco":96.2,"nivel_alerta":"Vermelho (Alerta Máximo)"},{"mes_num":1,"mes":"Jan","territorio":"Grajaú (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15256,"renda_media_sm":1.78,"chuva_72h_mm":180.4,"saturacao_solo_pct":100.0,"chamados_drenagem":455,"bueiros_obstruidos":191,"tempo_medio_atendimento_dias":17.7,"taxa_resolucao_7d_pct":28.0,"score_risco":95.6,"nivel_alerta":"Vermelho (Alerta Máximo)"},{"mes_num":2,"mes":"Fev","territorio":"Grajaú (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15256,"renda_media_sm":1.78,"chuva_72h_mm":176.2,"saturacao_solo_pct":100.0,"chamados_drenagem":458,"bueiros_obstruidos":192,"tempo_medio_atendimento_dias":17.4,"taxa_resolucao_7d_pct":28.9,"score_risco":94.7,"nivel_alerta":"Vermelho (Alerta Máximo)"},{"mes_num":3,"mes":"Mar","territorio":"Grajaú (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15256,"renda_media_sm":1.78,"chuva_72h_mm":90.1,"saturacao_solo_pct":62.1,"chamados_drenagem":238,"bueiros_obstruidos":99,"tempo_medio_atendimento_dias":11.7,"taxa_resolucao_7d_pct":50.5,"score_risco":52.3,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":4,"mes":"Abr","territorio":"Grajaú (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15256,"renda_media_sm":1.78,"chuva_72h_mm":120.9,"saturacao_solo_pct":79.2,"chamados_drenagem":331,"bueiros_obstruidos":139,"tempo_medio_atendimento_dias":13.8,"taxa_resolucao_7d_pct":42.6,"score_risco":69.3,"nivel_alerta":"Laranja (Alerta)"},{"mes_num":5,"mes":"Mai","territorio":"Grajaú (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15256,"renda_media_sm":1.78,"chuva_72h_mm":28.6,"saturacao_solo_pct":27.9,"chamados_drenagem":109,"bueiros_obstruidos":45,"tempo_medio_atendimento_dias":7.7,"taxa_resolucao_7d_pct":65.7,"score_risco":20.6,"nivel_alerta":"Verde (Normal)"},{"mes_num":6,"mes":"Jun","territorio":"Grajaú (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15256,"renda_media_sm":1.78,"chuva_72h_mm":58.8,"saturacao_solo_pct":44.7,"chamados_drenagem":154,"bueiros_obstruidos":64,"tempo_medio_atendimento_dias":9.7,"taxa_resolucao_7d_pct":58.1,"score_risco":35.6,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":7,"mes":"Jul","territorio":"Grajaú (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15256,"renda_media_sm":1.78,"chuva_72h_mm":24.1,"saturacao_solo_pct":25.4,"chamados_drenagem":81,"bueiros_obstruidos":34,"tempo_medio_atendimento_dias":7.4,"taxa_resolucao_7d_pct":66.9,"score_risco":17.7,"nivel_alerta":"Verde (Normal)"},{"mes_num":8,"mes":"Ago","territorio":"Grajaú (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15256,"renda_media_sm":1.78,"chuva_72h_mm":45.1,"saturacao_solo_pct":37.1,"chamados_drenagem":146,"bueiros_obstruidos":61,"tempo_medio_atendimento_dias":8.8,"taxa_resolucao_7d_pct":61.6,"score_risco":29.2,"nivel_alerta":"Verde (Normal)"},{"mes_num":9,"mes":"Set","territorio":"Grajaú (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15256,"renda_media_sm":1.78,"chuva_72h_mm":50.3,"saturacao_solo_pct":39.9,"chamados_drenagem":131,"bueiros_obstruidos":55,"tempo_medio_atendimento_dias":9.1,"taxa_resolucao_7d_pct":60.4,"score_risco":31.0,"nivel_alerta":"Verde (Normal)"},{"mes_num":10,"mes":"Out","territorio":"Grajaú (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15256,"renda_media_sm":1.78,"chuva_72h_mm":85.0,"saturacao_solo_pct":59.2,"chamados_drenagem":219,"bueiros_obstruidos":91,"tempo_medio_atendimento_dias":11.4,"taxa_resolucao_7d_pct":51.7,"score_risco":49.4,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":11,"mes":"Nov","territorio":"Grajaú (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15256,"renda_media_sm":1.78,"chuva_72h_mm":103.4,"saturacao_solo_pct":69.4,"chamados_drenagem":277,"bueiros_obstruidos":116,"tempo_medio_atendimento_dias":12.6,"taxa_resolucao_7d_pct":47.1,"score_risco":59.6,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":12,"mes":"Dez","territorio":"Grajaú (Zona Sul SP)","perfil_area":"Periferia \/ Encosta-Várzea","densidade_hab_km2":15256,"renda_media_sm":1.78,"chuva_72h_mm":175.9,"saturacao_solo_pct":100.0,"chamados_drenagem":461,"bueiros_obstruidos":193,"tempo_medio_atendimento_dias":17.4,"taxa_resolucao_7d_pct":28.9,"score_risco":94.7,"nivel_alerta":"Vermelho (Alerta Máximo)"},{"mes_num":1,"mes":"Jan","territorio":"Centro \/ Área Central (Referência)","perfil_area":"Área Central","densidade_hab_km2":6200,"renda_media_sm":4.5,"chuva_72h_mm":164.1,"saturacao_solo_pct":91.2,"chamados_drenagem":184,"bueiros_obstruidos":36,"tempo_medio_atendimento_dias":8.6,"taxa_resolucao_7d_pct":62.3,"score_risco":75.9,"nivel_alerta":"Laranja (Alerta)"},{"mes_num":2,"mes":"Fev","territorio":"Centro \/ Área Central (Referência)","perfil_area":"Área Central","densidade_hab_km2":6200,"renda_media_sm":4.5,"chuva_72h_mm":176.5,"saturacao_solo_pct":98.1,"chamados_drenagem":192,"bueiros_obstruidos":38,"tempo_medio_atendimento_dias":9.0,"taxa_resolucao_7d_pct":60.8,"score_risco":81.6,"nivel_alerta":"Vermelho (Alerta Máximo)"},{"mes_num":3,"mes":"Mar","territorio":"Centro \/ Área Central (Referência)","perfil_area":"Área Central","densidade_hab_km2":6200,"renda_media_sm":4.5,"chuva_72h_mm":128.5,"saturacao_solo_pct":71.4,"chamados_drenagem":151,"bueiros_obstruidos":30,"tempo_medio_atendimento_dias":7.4,"taxa_resolucao_7d_pct":66.9,"score_risco":59.6,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":4,"mes":"Abr","territorio":"Centro \/ Área Central (Referência)","perfil_area":"Área Central","densidade_hab_km2":6200,"renda_media_sm":4.5,"chuva_72h_mm":97.9,"saturacao_solo_pct":54.4,"chamados_drenagem":110,"bueiros_obstruidos":22,"tempo_medio_atendimento_dias":6.3,"taxa_resolucao_7d_pct":71.1,"score_risco":45.3,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":5,"mes":"Mai","territorio":"Centro \/ Área Central (Referência)","perfil_area":"Área Central","densidade_hab_km2":6200,"renda_media_sm":4.5,"chuva_72h_mm":5.0,"saturacao_solo_pct":2.8,"chamados_drenagem":46,"bueiros_obstruidos":9,"tempo_medio_atendimento_dias":3.2,"taxa_resolucao_7d_pct":82.8,"score_risco":3.0,"nivel_alerta":"Verde (Normal)"},{"mes_num":6,"mes":"Jun","territorio":"Centro \/ Área Central (Referência)","perfil_area":"Área Central","densidade_hab_km2":6200,"renda_media_sm":4.5,"chuva_72h_mm":44.9,"saturacao_solo_pct":24.9,"chamados_drenagem":73,"bueiros_obstruidos":14,"tempo_medio_atendimento_dias":4.5,"taxa_resolucao_7d_pct":77.9,"score_risco":21.1,"nivel_alerta":"Verde (Normal)"},{"mes_num":7,"mes":"Jul","territorio":"Centro \/ Área Central (Referência)","perfil_area":"Área Central","densidade_hab_km2":6200,"renda_media_sm":4.5,"chuva_72h_mm":25.3,"saturacao_solo_pct":14.1,"chamados_drenagem":63,"bueiros_obstruidos":12,"tempo_medio_atendimento_dias":3.9,"taxa_resolucao_7d_pct":80.2,"score_risco":12.2,"nivel_alerta":"Verde (Normal)"},{"mes_num":8,"mes":"Ago","territorio":"Centro \/ Área Central (Referência)","perfil_area":"Área Central","densidade_hab_km2":6200,"renda_media_sm":4.5,"chuva_72h_mm":46.1,"saturacao_solo_pct":25.6,"chamados_drenagem":74,"bueiros_obstruidos":14,"tempo_medio_atendimento_dias":4.6,"taxa_resolucao_7d_pct":77.5,"score_risco":21.6,"nivel_alerta":"Verde (Normal)"},{"mes_num":9,"mes":"Set","territorio":"Centro \/ Área Central (Referência)","perfil_area":"Área Central","densidade_hab_km2":6200,"renda_media_sm":4.5,"chuva_72h_mm":47.6,"saturacao_solo_pct":26.4,"chamados_drenagem":63,"bueiros_obstruidos":12,"tempo_medio_atendimento_dias":4.6,"taxa_resolucao_7d_pct":77.5,"score_risco":22.1,"nivel_alerta":"Verde (Normal)"},{"mes_num":10,"mes":"Out","territorio":"Centro \/ Área Central (Referência)","perfil_area":"Área Central","densidade_hab_km2":6200,"renda_media_sm":4.5,"chuva_72h_mm":123.1,"saturacao_solo_pct":68.4,"chamados_drenagem":121,"bueiros_obstruidos":24,"tempo_medio_atendimento_dias":7.2,"taxa_resolucao_7d_pct":67.6,"score_risco":56.7,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":11,"mes":"Nov","territorio":"Centro \/ Área Central (Referência)","perfil_area":"Área Central","densidade_hab_km2":6200,"renda_media_sm":4.5,"chuva_72h_mm":117.8,"saturacao_solo_pct":65.4,"chamados_drenagem":132,"bueiros_obstruidos":26,"tempo_medio_atendimento_dias":7.0,"taxa_resolucao_7d_pct":68.4,"score_risco":54.5,"nivel_alerta":"Amarelo (Atenção)"},{"mes_num":12,"mes":"Dez","territorio":"Centro \/ Área Central (Referência)","perfil_area":"Área Central","densidade_hab_km2":6200,"renda_media_sm":4.5,"chuva_72h_mm":189.6,"saturacao_solo_pct":100.0,"chamados_drenagem":181,"bueiros_obstruidos":36,"tempo_medio_atendimento_dias":9.5,"taxa_resolucao_7d_pct":58.9,"score_risco":82.9,"nivel_alerta":"Vermelho (Alerta Máximo)"}];
+
+  const selTerritorio = document.getElementById('filtroTerritorio');
+  const selPerfil = document.getElementById('filtroPerfil');
+  const selAlerta = document.getElementById('filtroAlerta');
+
+  // Popular dropdown de territórios
+  const territoriosUnicos = [...new Set(rawData.map(d => d.territorio))];
+  territoriosUnicos.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = t;
+    selTerritorio.appendChild(opt);
+  });
+
+  selTerritorio.addEventListener('change', atualizarDashboard);
+  selPerfil.addEventListener('change', atualizarDashboard);
+  selAlerta.addEventListener('change', atualizarDashboard);
+
+  function resetarFiltros() {
+    selTerritorio.value = 'TODOS';
+    selPerfil.value = 'TODOS';
+    selAlerta.value = 'TODOS';
+    atualizarDashboard();
+  }
+
+  function atualizarDashboard() {
+    const tVal = selTerritorio.value;
+    const pVal = selPerfil.value;
+    const aVal = selAlerta.value;
+
+    const filtrados = rawData.filter(d => {
+      return (tVal === 'TODOS' || d.territorio === tVal) &&
+             (pVal === 'TODOS' || d.perfil_area === pVal) &&
+             (aVal === 'TODOS' || d.nivel_alerta === aVal);
+    });
+
+    if (filtrados.length === 0) {
+      document.getElementById('kpiChamados').textContent = '0';
+      document.getElementById('kpiTempo').textContent = '-';
+      document.getElementById('kpiResolucao').textContent = '-';
+      document.getElementById('kpiScore').textContent = '-';
+      Plotly.purge('chartSazonalidade');
+      Plotly.purge('chartRanking');
+      Plotly.purge('chartDispersao');
+      return;
+    }
+
+    // Atualizar KPIs
+    const totalChamados = filtrados.reduce((acc, d) => acc + d.chamados_drenagem, 0);
+    const mediaTempo = filtrados.reduce((acc, d) => acc + d.tempo_medio_atendimento_dias, 0) / filtrados.length;
+    const mediaRes = filtrados.reduce((acc, d) => acc + d.taxa_resolucao_7d_pct, 0) / filtrados.length;
+    const mediaScore = filtrados.reduce((acc, d) => acc + d.score_risco, 0) / filtrados.length;
+
+    document.getElementById('kpiChamados').textContent = totalChamados.toLocaleString('pt-BR');
+    document.getElementById('kpiTempo').textContent = mediaTempo.toFixed(1).replace('.', ',') + ' dias';
+    document.getElementById('kpiResolucao').textContent = mediaRes.toFixed(1).replace('.', ',') + '%';
+    document.getElementById('kpiScore').textContent = mediaScore.toFixed(1).replace('.', ',') + ' / 100';
+
+    // 1. Gráfico Sazonalidade (Agrupado por mês)
+    const mesesOrdem = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const xMes = [], yChamados = [], yTempo = [];
+
+    mesesOrdem.forEach(m => {
+      const itensMes = filtrados.filter(d => d.mes === m);
+      if (itensMes.length > 0) {
+        xMes.push(m);
+        yChamados.push(itensMes.reduce((s, x) => s + x.chamados_drenagem, 0));
+        yTempo.push(Number((itensMes.reduce((s, x) => s + x.tempo_medio_atendimento_dias, 0) / itensMes.length).toFixed(1)));
+      }
+    });
+
+    Plotly.newPlot('chartSazonalidade', [
+      {
+        x: xMes,
+        y: yChamados,
+        name: 'Chamados Abertos',
+        type: 'bar',
+        marker: { color: '#0f3d68' },
+        text: yChamados,
+        textposition: 'outside'
+      },
+      {
+        x: xMes,
+        y: yTempo,
+        name: 'Tempo Médio Atendimento (dias)',
+        type: 'scatter',
+        mode: 'lines+markers',
+        yaxis: 'y2',
+        line: { color: '#d62828', width: 3 },
+        marker: { size: 8 }
+      }
+    ], {
+      margin: { t: 25, r: 55, l: 55, b: 40 },
+      yaxis: { title: 'Total de Chamados', rangemode: 'tozero' },
+      yaxis2: { title: 'Tempo Médio (dias)', overlaying: 'y', side: 'right', rangemode: 'tozero' },
+      legend: { orientation: 'h', y: 1.12 },
+      plot_bgcolor: '#ffffff',
+      paper_bgcolor: '#ffffff'
+    }, { responsive: true });
+
+    // 2. Gráfico Ranking Territorial
+    const terrMap = {};
+    filtrados.forEach(d => {
+      if (!terrMap[d.territorio]) terrMap[d.territorio] = [];
+      terrMap[d.territorio].push(d.taxa_resolucao_7d_pct);
+    });
+
+    const rankArr = Object.keys(terrMap).map(t => {
+      const avg = terrMap[t].reduce((a, b) => a + b, 0) / terrMap[t].length;
+      return { territorio: t, taxa: Number(avg.toFixed(1)) };
+    }).sort((a, b) => a.taxa - b.taxa);
+
+    Plotly.newPlot('chartRanking', [{
+      x: rankArr.map(r => r.taxa),
+      y: rankArr.map(r => r.territorio),
+      type: 'bar',
+      orientation: 'h',
+      marker: {
+        color: rankArr.map(r => r.taxa < 55 ? '#d62828' : (r.taxa < 75 ? '#f77f00' : '#2a9d8f'))
+      },
+      text: rankArr.map(r => r.taxa + '%'),
+      textposition: 'outside'
+    }], {
+      margin: { t: 20, r: 45, l: 195, b: 40 },
+      xaxis: { title: 'Taxa de Resolução ≤ 7 dias (%)', range: [0, 108] },
+      plot_bgcolor: '#ffffff',
+      paper_bgcolor: '#ffffff'
+    }, { responsive: true });
+
+    // 3. Gráfico Dispersão (Chuva vs Score)
+    const coresAlerta = {
+      'Verde (Normal)': '#2a9d8f',
+      'Amarelo (Atenção)': '#eab308',
+      'Laranja (Alerta)': '#f77f00',
+      'Vermelho (Alerta Máximo)': '#d62828'
+    };
+
+    const tracesDispersao = Object.keys(coresAlerta).map(nivel => {
+      const sub = filtrados.filter(d => d.nivel_alerta === nivel);
+      return {
+        x: sub.map(d => d.chuva_72h_mm),
+        y: sub.map(d => d.score_risco),
+        text: sub.map(d => `${d.territorio} (${d.mes})<br>Solo: ${d.saturacao_solo_pct}%`),
+        name: nivel,
+        mode: 'markers',
+        type: 'scatter',
+        marker: { size: 11, color: coresAlerta[nivel], opacity: 0.88 }
+      };
+    });
+
+    Plotly.newPlot('chartDispersao', tracesDispersao, {
+      margin: { t: 25, r: 20, l: 55, b: 45 },
+      xaxis: { title: 'Chuva Acumulada 72h (mm)' },
+      yaxis: { title: 'Score de Risco (0–100)', range: [0, 105] },
+      shapes: [
+        { type: 'line', x0: 0, x1: 230, y0: 60, y1: 60, line: { color: '#f77f00', width: 1.5, dash: 'dash' } },
+        { type: 'line', x0: 0, x1: 230, y0: 80, y1: 80, line: { color: '#d62828', width: 1.5, dash: 'dash' } }
+      ],
+      legend: { orientation: 'h', y: 1.15 },
+      plot_bgcolor: '#ffffff',
+      paper_bgcolor: '#ffffff'
+    }, { responsive: true });
+  }
+
+  atualizarDashboard();
+</script>
+</body>
+</html>
